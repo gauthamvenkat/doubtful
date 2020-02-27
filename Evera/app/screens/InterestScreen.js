@@ -26,69 +26,17 @@ export default class InterestScreen extends React.Component {
     data: [],
     playing: false,
   };
-
   componentDidMount() {
     this.fetchData();
+    this.trackPlayer();
   }
   fetchData = async () => {
-    const response = await fetch(
-      'http://www.json-generator.com/api/json/get/ceDWvXunQO?indent=2',
-    );
+    const response = await fetch('https://evera.herokuapp.com/news/sports');
     const json = await response.json();
-    this.setState({data: json.news});
+    this.setState({data: json});
   };
-  handleclick = () => {
-    this.setState({playing: true});
-  };
-  /*renderIconComponent = playing => {
-    const play = false;
-    if (play === playing) {
-      return (
-        <Icon
-          type="material-community"
-          name="pause-circle"
-          size={20}
-          style={styles.play}
-          onPress={() => TrackPlayer.pause()}
-        />
-      );
-    } else {
-      return (
-        <Icon
-          type="material-community"
-          name="play-circle"
-          size={20}
-          style={styles.play}
-          onPress={() => TrackPlayer.play()}
-        />
-      );
-    }
-  };*/
-  playtrack() {}
-  trackPlayer(playerid, playerurl, playertitle, playerartist, playerartwork) {
+  trackPlayer() {
     TrackPlayer.setupPlayer().then(async () => {
-      await TrackPlayer.add({
-        id: playerid,
-        url: playerurl,
-        title: playertitle,
-        artist: playerartist,
-        artwork: playerartwork,
-      });
-      this.playsate = await TrackPlayer.getState();
-      /*TrackPlayer.addEventListener('playback-state', data => {
-        console.log('playback-state:', data.state);
-        this.state = data.state;
-        return (
-        <Icon
-          type="material-community"
-          name="pause-circle"
-          size={20}
-          style={styles.play}
-          onPress={() => TrackPlayer.pause()}
-        />
-      );
-        }
-      });*/
       TrackPlayer.updateOptions({
         alwaysPauseOnInterruption: true,
         waitForBuffer: true,
@@ -97,8 +45,6 @@ export default class InterestScreen extends React.Component {
           TrackPlayer.CAPABILITY_PLAY,
           TrackPlayer.CAPABILITY_PAUSE,
           TrackPlayer.CAPABILITY_SEEK_TO,
-          TrackPlayer.CAPABILITY_JUMP_FORWARD,
-          TrackPlayer.CAPABILITY_JUMP_BACKWARD,
         ],
         // compactCapabilities: [
         // 	TrackPlayer.CAPABPLILITY_PLAY,
@@ -115,23 +61,57 @@ export default class InterestScreen extends React.Component {
         // 	TrackPlayer.CAPABILITY_JUMP_BACKWARD,
         // ],
       });
+      TrackPlayer.addEventListener('remote-pause', event => {
+        TrackPlayer.pause();
+      });
+      TrackPlayer.addEventListener('remote-play', event => {
+        TrackPlayer.play();
+      });
     });
   }
-  renderIconComponent() {
-    console.log(this.state.playerstate);
-    if (this.playsate === 8) {
-      console.log('isequal');
-      return (
-        <Icon
-          type="material-community"
-          name="pause-circle"
-          size={20}
-          style={styles.play}
-          onPress={() => TrackPlayer.pause()}
-        />
-      );
+  trackplayeradd = async (
+    playerid,
+    playerurl,
+    playertitle,
+    playerartist,
+    playerartwork,
+  ) => {
+    const currentTrack = await TrackPlayer.getCurrentTrack();
+    var itemid = playerid.toString();
+    console.log(currentTrack);
+    console.log(itemid);
+    if (currentTrack === null) {
+      await TrackPlayer.add({
+        id: playerid,
+        url: playerurl,
+        title: playertitle,
+        artist: playerartist,
+        artwork: playerartwork,
+      });
+      TrackPlayer.play();
+      this.setState({playing: true});
+    } else if (itemid !== currentTrack) {
+      console.log(this.state.playing);
+      TrackPlayer.reset();
+      await TrackPlayer.add({
+        id: playerid,
+        url: playerurl,
+        title: playertitle,
+        artist: playerartist,
+        artwork: playerartwork,
+      });
+      TrackPlayer.play();
+      this.setState({playing: true});
+    } else {
+      console.log('second', this.state.playing);
+      if (this.state.playing === false) {
+        TrackPlayer.play();
+      } else {
+        TrackPlayer.pause();
+      }
+      this.setState({playing: !this.state.playing});
     }
-  }
+  };
   render() {
     return (
       <View style={styles.container}>
@@ -148,40 +128,32 @@ export default class InterestScreen extends React.Component {
                 <View>
                   <TouchableHighlight
                     onPress={() => {
-                      this.trackPlayer(
-                        item.id,
-                        item.audio,
-                        'Song',
-                        'Gautham',
-                        item.image,
+                      this.trackplayeradd(
+                        item._id,
+                        item.Audio_Link,
+                        item.Title,
+                        item.Author,
+                        item.Image,
                       );
-                      TrackPlayer.play();
                     }}>
                     <View>
                       <ImageBackground
-                        source={{uri: item.image}}
+                        source={{uri: item.Image}}
                         resizeMode="cover"
                         style={styles.image}>
-                        {this.state.isPlaying ? (
-                          true
-                        ) : (
+                        {this.state.playing ? (
                           <Icon
                             type="material-community"
-                            name="play-circle"
+                            name="pause-circle"
                             size={20}
                             style={styles.play}
-                            onPress={() => TrackPlayer.play()}
                           />
-                        )}
-                        {this.state.isPlaying ? (
-                          false
                         ) : (
                           <Icon
                             type="material-community"
                             name="play-circle"
                             size={20}
                             style={styles.play}
-                            onPress={() => TrackPlayer.play()}
                           />
                         )}
                       </ImageBackground>
@@ -189,15 +161,15 @@ export default class InterestScreen extends React.Component {
                   </TouchableHighlight>
                 </View>
                 <View style={styles.title}>
-                  <Text style={styles.lineStyle}>{`${item.title}`}</Text>
+                  <Text style={styles.lineStyle}>{`${item.Title}`}</Text>
                 </View>
               </View>
               <Text style={styles.author}>
                 {`${item.time}`}
                 <Text style={{color: '#ffffff'}}> • </Text>
-                {`${item.author}`} <Text style={{color: '#ffffff'}}>•</Text>{' '}
+                {`${item.Author}`} <Text style={{color: '#ffffff'}}>•</Text>{' '}
                 <A
-                  href={item.url}
+                  href={item.URL}
                   style={{color: '#A9A9A9', textDecorationLine: 'underline'}}>
                   View Original
                 </A>
@@ -215,36 +187,44 @@ export default class InterestScreen extends React.Component {
               <View style={styles.container2}>
                 <View>
                   <TouchableHighlight
+                    item={item}
                     onPress={() => {
-                      TrackPlayer.setupPlayer().then(async () => {
-                        await TrackPlayer.add({
-                          id: item.id,
-                          url: item.audio,
-                          title: 'Track Title',
-                          artist: 'Track Artist',
-                          artwork: item.image,
-                        });
-                        TrackPlayer.updateOptions({
-                          capabilities: [
-                            TrackPlayer.CAPABILITY_PLAY,
-                            TrackPlayer.CAPABILITY_PAUSE,
-                            TrackPlayer.CAPABILITY_STOP,
-                          ],
-                          compactCapabilities: [
-                            TrackPlayer.CAPABILITY_PLAY,
-                            TrackPlayer.CAPABILITY_PAUSE,
-                            TrackPlayer.CAPABILITY_STOP,
-                          ],
-                        });
-                      });
-                      TrackPlayer.play();
+                      this.trackPlayer(
+                        item.id,
+                        item.audio,
+                        'Song',
+                        'Gautham',
+                        item.image,
+                      );
+                      this.setState({playing: !this.state.playing});
+                      if (this.state.playing === false) {
+                        TrackPlayer.play();
+                      } else if (this.state.playing === true) {
+                        TrackPlayer.pause();
+                      }
                     }}>
                     <View>
                       <ImageBackground
                         source={{uri: item.image}}
                         resizeMode="cover"
                         style={styles.image}>
-                        {this.renderIconComponent()}
+                        {this.state.playing ? (
+                          <Icon
+                            type="material-community"
+                            name="pause-circle"
+                            size={20}
+                            style={styles.play}
+                            onPress={() => TrackPlayer.pause()}
+                          />
+                        ) : (
+                          <Icon
+                            type="material-community"
+                            name="play-circle"
+                            size={20}
+                            style={styles.play}
+                            onPress={() => TrackPlayer.pause()}
+                          />
+                        )}
                       </ImageBackground>
                     </View>
                   </TouchableHighlight>
@@ -281,11 +261,11 @@ const styles = StyleSheet.create({
   },
   lineStyle: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 18,
   },
   listview: {
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 10,
     borderBottomColor: '#A9A9A9',
     borderBottomWidth: 1,
   },
@@ -328,5 +308,6 @@ const styles = StyleSheet.create({
   },
   list1: {
     flexDirection: 'column',
+    paddingBottom: 80,
   },
 });
